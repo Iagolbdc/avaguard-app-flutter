@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "819917916562",
+    "project_id": "hackathon-24165",
+    "storage_bucket": "hackathon-24165.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:819917916562:android:66f3afe915a0659a16194b",
+        "android_client_info": {
+          "package_name": "com.example.avaguard"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAO7oHxF1FxYEnsUiWuMKErIcHQfiNJzKA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
