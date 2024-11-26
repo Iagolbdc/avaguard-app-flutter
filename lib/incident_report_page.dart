@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:record/record.dart';
 
 class IncidentReportPage extends StatefulWidget {
   final userId;
@@ -14,6 +15,7 @@ class IncidentReportPage extends StatefulWidget {
 
 class _IncidentReportPageState extends State<IncidentReportPage>
     with TickerProviderStateMixin {
+  final _recorder = AudioRecorder();
   String selectedDate = "Informe a data e hora";
   String description = "";
   String selectedFile = "";

@@ -2,10 +2,17 @@ import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:avaguard/audio_recorder.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AvaguardAudioHandler extends BaseAudioHandler {
   final _player = AudioPlayer();
   final AudioRecord _recorder = AudioRecord();
+  String? userId;
+
+  Future<void> initPrefs() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    userId = prefs.getString('userId');
+  }
 
   final BehaviorSubject<bool> isRecording = BehaviorSubject.seeded(false);
 
@@ -29,6 +36,7 @@ class AvaguardAudioHandler extends BaseAudioHandler {
 
   @override
   Future<void> pause() async {
+    await initPrefs();
     print("Parando");
     isRecording.add(false);
     await _recorder.stopRecording();
@@ -37,26 +45,32 @@ class AvaguardAudioHandler extends BaseAudioHandler {
 
   @override
   Future<void> play() async {
+    await initPrefs();
     if (_player.playerState.playing) {
       print("Parando");
       isRecording.add(false);
-      await _recorder.toggleRecording();
+      if (userId != null) {
+        await _recorder.toggleRecording(userId!);
+        print("EUTENTEIII");
+      }
       return _player.pause();
     }
 
     isRecording.add(true);
-    await _recorder.toggleRecording();
+    if (userId != null) {
+      await _recorder.toggleRecording(userId!);
+      print("EUTENTEIII");
+    }
     print("Tocando");
+
     return _player.play();
   }
 
   Future<void> startService() async {
-    // Exemplo: configurar o player e preparar o estado inicial
     await _player.setAudioSource(
       AudioSource.uri(Uri.parse(_mediaItem.id)),
     );
 
-    // Exemplo: iniciar uma gravação automaticamente
     if (await _recorder.hasPermission()) {
       await play();
       print('Serviço de áudio iniciado com gravação ativa.');

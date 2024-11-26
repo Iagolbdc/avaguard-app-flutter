@@ -28,7 +28,7 @@ Future<void> main() async {
     ),
   );
 
-  audioHandler.startService();
+  await audioHandler.startService();
 
   runApp(MyApp());
 }
