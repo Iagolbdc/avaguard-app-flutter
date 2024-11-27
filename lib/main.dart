@@ -51,7 +51,9 @@ class MyApp extends StatelessWidget {
 
           final userId = snapshot.data;
 
-          if (userId != null) {
+          print(userId);
+
+          if (userId != null && userId.isNotEmpty) {
             return IncidentReportPage(userId: userId);
           } else {
             return PermissionRequester(child: LoginScreen());

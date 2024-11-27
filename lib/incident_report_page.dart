@@ -17,13 +17,14 @@ class _IncidentReportPageState extends State<IncidentReportPage>
     with TickerProviderStateMixin {
   final _recorder = AudioRecord();
   String selectedDate = "Informe a data e hora";
-  String description = "";
   String selectedFile = "";
   bool isSending = false;
   bool isSuccess = false;
+  bool isRecording = false;
   late AnimationController _successController;
-  bool hasPendingAudio = true; // Controle da exibição do aviso
+  bool hasPendingAudio = false; // Controle da exibição do aviso
   SharedPreferences? prefs;
+  final TextEditingController _descriptionController = TextEditingController();
 
   Future<void> initPrefs() async {
     prefs = await SharedPreferences.getInstance();
@@ -49,6 +50,7 @@ class _IncidentReportPageState extends State<IncidentReportPage>
   @override
   void dispose() {
     _successController.dispose();
+    _descriptionController.dispose();
     super.dispose();
   }
 
@@ -89,16 +91,21 @@ class _IncidentReportPageState extends State<IncidentReportPage>
   Future<void> _sendingAudio() async {
     setState(() {
       isSending = true;
+      isRecording = false;
     });
 
     print(widget.userId);
+    print(prefs?.getString('userId'));
     String? recordingId = prefs?.getString('recordingId');
     String? filePath = prefs?.getString('filePath');
     // Enviar gravação para o backend
     try {
       print(recordingId);
-      await _recorder.sendRecording(description, recordingId, filePath);
+      await _recorder.sendRecording(
+          _descriptionController.text, recordingId, filePath);
       print("Incidente reportado com sucesso.");
+      prefs?.remove('recordingId');
+      prefs?.remove('filePath');
     } catch (e) {
       print("Erro ao enviar o incidente: $e");
     }
@@ -106,7 +113,9 @@ class _IncidentReportPageState extends State<IncidentReportPage>
     setState(() {
       isSending = false;
       isSuccess = true;
-      hasPendingAudio = false; // Remove o aviso
+      hasPendingAudio = false;
+      _descriptionController.clear();
+      selectedDate = "Informe a data e hora";
     });
 
     _resetSuccessAnimation();
@@ -154,6 +163,42 @@ class _IncidentReportPageState extends State<IncidentReportPage>
                 ),
                 SizedBox(height: 50),
                 // Aviso de áudio pendente
+                // Aviso de gravação em andamento
+                ValueListenableBuilder<bool>(
+                  valueListenable: AudioRecord.isRecording,
+                  builder: (context, isRecording, child) {
+                    if (isRecording) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: Card(
+                          color: Colors.green[700],
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Padding(
+                            padding: EdgeInsets.all(12.0),
+                            child: Row(
+                              children: [
+                                Icon(Icons.mic, color: Colors.white),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    "Gravação em andamento...",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
                 if (hasPendingAudio)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -216,11 +261,7 @@ class _IncidentReportPageState extends State<IncidentReportPage>
                   margin: EdgeInsets.all(16.0),
                   child: TextField(
                     maxLines: 5,
-                    onChanged: (value) {
-                      setState(() {
-                        description = value;
-                      });
-                    },
+                    controller: _descriptionController,
                     decoration: InputDecoration(
                       hintText: "Descreva o que aconteceu...",
                       border: OutlineInputBorder(),

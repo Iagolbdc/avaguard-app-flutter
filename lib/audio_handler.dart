@@ -51,7 +51,6 @@ class AvaguardAudioHandler extends BaseAudioHandler {
       isRecording.add(false);
       if (userId != null) {
         await _recorder.toggleRecording(userId!);
-        print("EUTENTEIII");
       }
       return _player.pause();
     }
@@ -59,7 +58,6 @@ class AvaguardAudioHandler extends BaseAudioHandler {
     isRecording.add(true);
     if (userId != null) {
       await _recorder.toggleRecording(userId!);
-      print("EUTENTEIII");
     }
     print("Tocando");
 

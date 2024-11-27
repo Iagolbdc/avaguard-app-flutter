@@ -15,7 +15,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool isLoading = false;
   String? errorMessage;
 
-  late SharedPreferences prefs;
+  SharedPreferences? prefs;
 
   showSnackBar(String texto) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -47,28 +47,22 @@ class _LoginScreenState extends State<LoginScreen> {
         await AuthMethods.loginUser(
           email: email,
           password: password,
-          prefs: prefs,
+          prefs: prefs!,
           showSnackBar: showSnackBar,
           context: context,
         );
-
-        // Simula uma requisição
-        Future.delayed(Duration(seconds: 2), () {
-          setState(() {
-            isLoading = false;
-          });
-        });
       } else {
         setState(() {
           errorMessage = "Por favor, corrija os erros antes de continuar.";
         });
       }
     } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
       print(e);
     }
+
+    setState(() {
+      isLoading = false;
+    });
   }
 
   @override

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:avaguard/resources/firestore_methods.dart';
+import 'package:flutter/foundation.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
@@ -8,7 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class AudioRecord {
   final _recorder = AudioRecorder();
-  bool isRecording = false;
+  static final ValueNotifier<bool> isRecording = ValueNotifier<bool>(false);
   final FirebaseStorageService _storageService = FirebaseStorageService();
   String? _recordingId;
   String? _firebaseUrl;
@@ -27,6 +28,7 @@ class AudioRecord {
         _recordingId =
             responseBody['employeesRecording']['employeesRecordingId'];
         SharedPreferences prefs = await SharedPreferences.getInstance();
+        prefs.remove('recordingId');
         prefs.setString('recordingId', _recordingId!);
         print("Gravação iniciada no backend com ID: $_recordingId");
 
@@ -50,8 +52,9 @@ class AudioRecord {
           ),
           path: filePath,
         );
+        prefs.remove('filePath');
         prefs.setString('filePath', filePath);
-        isRecording = true;
+        isRecording.value = true;
         print("Gravação local iniciada: $filePath");
       } else {
         print("Erro ao iniciar a gravação no backend: ${initResponse.body}");
@@ -68,13 +71,13 @@ class AudioRecord {
 
   // Para a gravação
   Future<String?> stopRecording() async {
-    if (!isRecording) {
+    if (!isRecording.value) {
       print("Nenhuma gravação em andamento.");
       return null;
     }
 
     final String? path = await _recorder.stop();
-    isRecording = false;
+    isRecording.value = false;
     print(_recordingId);
     if (path != null) {
       print("Gravação salva em: $path");
@@ -120,11 +123,13 @@ class AudioRecord {
     }
   }
 
-  Future<void> toggleRecording(String userId) async {
-    if (isRecording) {
+  Future<bool> toggleRecording(String userId) async {
+    if (isRecording.value) {
       await stopRecording();
+      return false; // Parou a gravação
     } else {
       await startRecording(userId);
+      return true; // Começou a gravação
     }
   }
 }
