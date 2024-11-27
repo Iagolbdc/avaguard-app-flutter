@@ -1,8 +1,8 @@
+import 'package:avaguard/audio_recorder.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:record/record.dart';
 
 class IncidentReportPage extends StatefulWidget {
   final userId;
@@ -15,7 +15,7 @@ class IncidentReportPage extends StatefulWidget {
 
 class _IncidentReportPageState extends State<IncidentReportPage>
     with TickerProviderStateMixin {
-  final _recorder = AudioRecorder();
+  final _recorder = AudioRecord();
   String selectedDate = "Informe a data e hora";
   String description = "";
   String selectedFile = "";
@@ -86,15 +86,22 @@ class _IncidentReportPageState extends State<IncidentReportPage>
   }
 
   // Método para mostrar animação de envio
-  Future<void> _showSendingAnimation() async {
+  Future<void> _sendingAudio() async {
     setState(() {
       isSending = true;
     });
 
     print(widget.userId);
-
-    // Simula o envio com 3 segundos de atraso
-    await Future.delayed(Duration(seconds: 3));
+    String? recordingId = prefs?.getString('recordingId');
+    String? filePath = prefs?.getString('filePath');
+    // Enviar gravação para o backend
+    try {
+      print(recordingId);
+      await _recorder.sendRecording(description, recordingId, filePath);
+      print("Incidente reportado com sucesso.");
+    } catch (e) {
+      print("Erro ao enviar o incidente: $e");
+    }
 
     setState(() {
       isSending = false;
@@ -244,7 +251,7 @@ class _IncidentReportPageState extends State<IncidentReportPage>
                   child: Container(
                     margin: EdgeInsets.symmetric(vertical: 50.0),
                     child: ElevatedButton(
-                      onPressed: _showSendingAnimation,
+                      onPressed: _sendingAudio,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Color(0xFF5360F5),
                         minimumSize: Size(200, 50),

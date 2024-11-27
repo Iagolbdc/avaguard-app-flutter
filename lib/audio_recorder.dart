@@ -4,12 +4,14 @@ import 'package:avaguard/resources/firestore_methods.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AudioRecord {
   final _recorder = AudioRecorder();
   bool isRecording = false;
   final FirebaseStorageService _storageService = FirebaseStorageService();
   String? _recordingId;
+  String? _firebaseUrl;
 
   // Inicia a gravação
   Future<void> startRecording(String userId) async {
@@ -24,6 +26,8 @@ class AudioRecord {
         final responseBody = jsonDecode(initResponse.body);
         _recordingId =
             responseBody['employeesRecording']['employeesRecordingId'];
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        prefs.setString('recordingId', _recordingId!);
         print("Gravação iniciada no backend com ID: $_recordingId");
 
         final Directory? externalDir = await getExternalStorageDirectory();
@@ -33,7 +37,7 @@ class AudioRecord {
         }
 
         final String filePath =
-            '${externalDir.path}/audios/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
+            '${externalDir.path}/audios/audio_${DateTime.now().millisecondsSinceEpoch}_$userId.m4a';
 
         // Certifique-se de que o diretório existe
         await Directory('${externalDir.path}/audios').create(recursive: true);
@@ -46,6 +50,7 @@ class AudioRecord {
           ),
           path: filePath,
         );
+        prefs.setString('filePath', filePath);
         isRecording = true;
         print("Gravação local iniciada: $filePath");
       } else {
@@ -70,37 +75,49 @@ class AudioRecord {
 
     final String? path = await _recorder.stop();
     isRecording = false;
-
+    print(_recordingId);
     if (path != null) {
       print("Gravação salva em: $path");
-
-      // Envia o arquivo para o Firebase Storage
-      final downloadUrl = await _storageService.uploadFile(path, 'audios');
-      if (downloadUrl != null && _recordingId != null) {
-        print("Áudio enviado para o Firebase Storage com URL: $downloadUrl");
-
-        // Fazer a chamada POST para finalizar a gravação no backend
-        final finishResponse = await http.post(
-          Uri.parse('https://avaguard-api.vercel.app/finishEmployeesRecording'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'employeesRecordingId': _recordingId,
-            'url': downloadUrl,
-            'description': 'aidento'
-          }),
-        );
-
-        if (finishResponse.statusCode == 201) {
-          print("Gravação finalizada com sucesso no backend.");
-        } else {
-          print(
-              "Erro ao finalizar a gravação no backend: ${finishResponse.body}");
-        }
-      } else {
-        print("Erro: URL do Firebase ou ID da gravação ausente.");
-      }
     }
     return path;
+  }
+
+  // Envia os dados da gravação para o backend
+  Future<void> sendRecording(
+      String description, String? recordingId, String? localFilePath) async {
+    print(recordingId);
+    if (recordingId != null) {
+      final downloadUrl =
+          await _storageService.uploadFile(localFilePath!, 'audio-files');
+      if (downloadUrl != null) {
+        _firebaseUrl = downloadUrl;
+        print("Áudio enviado para o Firebase Storage com URL: $downloadUrl");
+      } else {
+        print("Erro: URL do Firebase ou ID da gravação ausente.");
+        return;
+      }
+      final finishResponse = await http.post(
+        Uri.parse('https://avaguard-api.vercel.app/finishEmployeesRecording'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'employeesRecordingId': recordingId,
+          'url': _firebaseUrl,
+          'description': description,
+        }),
+      );
+
+      if (finishResponse.statusCode == 201) {
+        print("Gravação enviada com sucesso para o backend.");
+      } else {
+        print(
+            "Erro ao enviar a gravação para o backend: ${finishResponse.body}");
+      }
+    }
+
+    if (recordingId == null || _firebaseUrl == null) {
+      print("Erro: ID da gravação ou URL do áudio ausente.");
+      return;
+    }
   }
 
   Future<void> toggleRecording(String userId) async {
