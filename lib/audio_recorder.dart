@@ -6,10 +6,12 @@ import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'config.dart';
 
 class AudioRecord {
   final _recorder = AudioRecorder();
   static final ValueNotifier<bool> isRecording = ValueNotifier<bool>(false);
+  //static final ValueNotifier<bool> hasPendingAudio = ValueNotifier<bool>(false);
   final FirebaseStorageService _storageService = FirebaseStorageService();
   String? _recordingId;
   String? _firebaseUrl;
@@ -18,7 +20,7 @@ class AudioRecord {
   Future<void> startRecording(String userId) async {
     if (await _recorder.hasPermission() && userId.isNotEmpty) {
       final initResponse = await http.post(
-        Uri.parse('https://avaguard-api.vercel.app/initEmployeesRecording'),
+        Uri.parse(initAudioRecording),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'userId': userId}),
       );
@@ -81,13 +83,13 @@ class AudioRecord {
     print(_recordingId);
     if (path != null) {
       print("Gravação salva em: $path");
+      //hasPendingAudio.value = true;
     }
     return path;
   }
 
   // Envia os dados da gravação para o backend
-  Future<void> sendRecording(
-      String description, String? recordingId, String? localFilePath) async {
+  Future<void> sendRecording(String? recordingId, String? localFilePath) async {
     print(recordingId);
     if (recordingId != null) {
       final downloadUrl =
@@ -100,17 +102,32 @@ class AudioRecord {
         return;
       }
       final finishResponse = await http.post(
-        Uri.parse('https://avaguard-api.vercel.app/finishEmployeesRecording'),
+        Uri.parse(finishAudioRecording),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'employeesRecordingId': recordingId,
           'url': _firebaseUrl,
-          'description': description,
         }),
       );
 
       if (finishResponse.statusCode == 201) {
         print("Gravação enviada com sucesso para o backend.");
+        //hasPendingAudio.value = false;
+
+        // Apagar o arquivo local após o envio
+        if (localFilePath.isNotEmpty) {
+          final file = File(localFilePath);
+          if (await file.exists()) {
+            try {
+              await file.delete();
+              print("Arquivo local deletado: $localFilePath");
+            } catch (e) {
+              print("Erro ao deletar o arquivo: $e");
+            }
+          } else {
+            print("Arquivo não encontrado para deletar: $localFilePath");
+          }
+        }
       } else {
         print(
             "Erro ao enviar a gravação para o backend: ${finishResponse.body}");

@@ -20,9 +20,7 @@ class _IncidentReportPageState extends State<IncidentReportPage>
   String selectedFile = "";
   bool isSending = false;
   bool isSuccess = false;
-  bool isRecording = false;
   late AnimationController _successController;
-  bool hasPendingAudio = false; // Controle da exibição do aviso
   SharedPreferences? prefs;
   final TextEditingController _descriptionController = TextEditingController();
 
@@ -62,7 +60,7 @@ class _IncidentReportPageState extends State<IncidentReportPage>
       firstDate: DateTime(2000),
       lastDate: DateTime(2101),
     );
-
+    //print("Gravação pendente: ${AudioRecord.hasPendingAudio}");
     if (pickedDate != null) {
       setState(() {
         selectedDate =
@@ -91,7 +89,6 @@ class _IncidentReportPageState extends State<IncidentReportPage>
   Future<void> _sendingAudio() async {
     setState(() {
       isSending = true;
-      isRecording = false;
     });
 
     print(widget.userId);
@@ -101,11 +98,8 @@ class _IncidentReportPageState extends State<IncidentReportPage>
     // Enviar gravação para o backend
     try {
       print(recordingId);
-      await _recorder.sendRecording(
-          _descriptionController.text, recordingId, filePath);
+      await _recorder.sendRecording(recordingId, filePath);
       print("Incidente reportado com sucesso.");
-      prefs?.remove('recordingId');
-      prefs?.remove('filePath');
     } catch (e) {
       print("Erro ao enviar o incidente: $e");
     }
@@ -113,7 +107,6 @@ class _IncidentReportPageState extends State<IncidentReportPage>
     setState(() {
       isSending = false;
       isSuccess = true;
-      hasPendingAudio = false;
       _descriptionController.clear();
       selectedDate = "Informe a data e hora";
     });
@@ -199,35 +192,40 @@ class _IncidentReportPageState extends State<IncidentReportPage>
                     return const SizedBox.shrink();
                   },
                 ),
-                if (hasPendingAudio)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Card(
-                      color: Colors.yellow[700],
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Row(
-                          children: [
-                            Icon(Icons.warning, color: Colors.black),
-                            SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                "Você tem um áudio pendente pronto para envio.",
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-
+                // ValueListenableBuilder(
+                //     valueListenable: AudioRecord.hasPendingAudio,
+                //     builder: (context, hasPendingAudio, child) {
+                //       if (hasPendingAudio) {
+                //         return Padding(
+                //           padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                //           child: Card(
+                //             color: Colors.yellow[700],
+                //             shape: RoundedRectangleBorder(
+                //               borderRadius: BorderRadius.circular(8),
+                //             ),
+                //             child: Padding(
+                //               padding: const EdgeInsets.all(12.0),
+                //               child: Row(
+                //                 children: [
+                //                   Icon(Icons.warning, color: Colors.black),
+                //                   SizedBox(width: 8),
+                //                   Expanded(
+                //                     child: Text(
+                //                       "Você tem um áudio pendente pronto para envio.",
+                //                       style: TextStyle(
+                //                         color: Colors.black,
+                //                         fontWeight: FontWeight.bold,
+                //                       ),
+                //                     ),
+                //                   ),
+                //                 ],
+                //               ),
+                //             ),
+                //           ),
+                //         );
+                //       }
+                //       return const SizedBox.shrink();
+                //     }),
                 // Campo para data
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -291,16 +289,31 @@ class _IncidentReportPageState extends State<IncidentReportPage>
                 Center(
                   child: Container(
                     margin: EdgeInsets.symmetric(vertical: 50.0),
-                    child: ElevatedButton(
-                      onPressed: _sendingAudio,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFF5360F5),
-                        minimumSize: Size(200, 50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: Text("Enviar"),
+                    child: ValueListenableBuilder<bool>(
+                      valueListenable: AudioRecord.isRecording,
+                      builder: (context, isRecording, child) {
+                        return ElevatedButton(
+                          onPressed: isRecording
+                              ? _sendingAudio
+                              : null, // Desabilita se não houver áudio pendente
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isRecording
+                                ? Color(0xFF5360F5)
+                                : Colors.grey, // Cor do botão desativado
+                            minimumSize: Size(200, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Text(
+                            "Enviar",
+                            style: TextStyle(
+                              color:
+                                  isRecording ? Colors.white : Colors.black54,
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ),

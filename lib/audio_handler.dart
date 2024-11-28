@@ -8,10 +8,14 @@ class AvaguardAudioHandler extends BaseAudioHandler {
   final _player = AudioPlayer();
   final AudioRecord _recorder = AudioRecord();
   String? userId;
+  String? recordingId;
+  String? localFilePath;
 
   Future<void> initPrefs() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     userId = prefs.getString('userId');
+    recordingId = prefs.getString('recordingId');
+    localFilePath = prefs.getString('filePath');
   }
 
   final BehaviorSubject<bool> isRecording = BehaviorSubject.seeded(false);
@@ -37,6 +41,7 @@ class AvaguardAudioHandler extends BaseAudioHandler {
   @override
   Future<void> pause() async {
     await initPrefs();
+    _recorder.sendRecording(recordingId, localFilePath);
     print("Parando");
     isRecording.add(false);
     await _recorder.stopRecording();
