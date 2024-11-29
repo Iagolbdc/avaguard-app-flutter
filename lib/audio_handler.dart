@@ -1,7 +1,6 @@
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:avaguard/audio_recorder.dart';
-import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AvaguardAudioHandler extends BaseAudioHandler {
@@ -11,16 +10,14 @@ class AvaguardAudioHandler extends BaseAudioHandler {
   String? recordingId;
   String? localFilePath;
 
-  Future<void> initPrefs() async {
+  Future<SharedPreferences> initPrefs() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     userId = prefs.getString('userId');
     recordingId = prefs.getString('recordingId');
     localFilePath = prefs.getString('filePath');
+
+    return prefs;
   }
-
-  final BehaviorSubject<bool> isRecording = BehaviorSubject.seeded(false);
-
-  Stream<bool> get isRecordingStream => isRecording.stream;
 
   static const MediaItem _mediaItem = MediaItem(
     id: 'https://s3.amazonaws.com/scifri-episodes/scifri20181123-episode.mp3',
@@ -40,33 +37,31 @@ class AvaguardAudioHandler extends BaseAudioHandler {
     await initPrefs();
     print("//////////////////////");
     print("$recordingId - $localFilePath");
-    if (recordingId != null && localFilePath != null)
-      _recorder.sendRecording(recordingId, localFilePath);
-    isRecording.add(false);
+    // if (recordingId != null && localFilePath != null) _recorder.sendRecording(recordingId, localFilePath);
     print("Parando");
-    isRecording.add(false);
-    if (isRecording.value) {
-      print(isRecording.value);
-      await _recorder.stopRecording();
+    if (recordingId == null || localFilePath == null) {
+      print("Erro: Nenhuma gravação ativa para pausar.");
+      return;
     }
+    await _recorder.stopRecording(
+        recordingId!, localFilePath!, await initPrefs());
     return _player.pause();
   }
 
   @override
   Future<void> play() async {
-    await initPrefs();
     if (_player.playerState.playing) {
       print("Parando");
-      isRecording.add(false);
-      if (userId != null) {
-        await _recorder.toggleRecording(userId!);
+      if (userId?.isNotEmpty ?? false) {
+        await _recorder.toggleRecording(
+            userId!, recordingId!, localFilePath!, await initPrefs());
       }
       return _player.pause();
     }
 
-    isRecording.add(true);
-    if (userId != null) {
-      await _recorder.toggleRecording(userId!);
+    if (userId?.isNotEmpty ?? false) {
+      await _recorder.toggleRecording(
+          userId!, recordingId!, localFilePath!, await initPrefs());
     }
     print("Tocando");
 
@@ -80,7 +75,7 @@ class AvaguardAudioHandler extends BaseAudioHandler {
 
     if (await _recorder.hasPermission()) {
       await play();
-      print('Serviço de áudio iniciado com gravação ativa.');
+      print('Serviço de áudio iniciado.');
     } else {
       print('Permissões de gravação não concedidas.');
     }

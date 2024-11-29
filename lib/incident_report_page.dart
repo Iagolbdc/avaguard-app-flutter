@@ -60,7 +60,8 @@ class _IncidentReportPageState extends State<IncidentReportPage>
       firstDate: DateTime(2000),
       lastDate: DateTime(2101),
     );
-    //print("Gravação pendente: ${AudioRecord.hasPendingAudio}");
+    print(
+        "Gravação pendente: ${prefs!.getString('recordingId')} - ${prefs!.getString('filePath')}");
     if (pickedDate != null) {
       setState(() {
         selectedDate =
@@ -96,7 +97,7 @@ class _IncidentReportPageState extends State<IncidentReportPage>
 
     try {
       print(recordingId);
-      await _recorder.sendRecording(recordingId, filePath);
+      await _recorder.sendRecording(recordingId, filePath, prefs!);
       print("Incidente reportado com sucesso.");
     } catch (e) {
       print("Erro ao enviar o incidente: $e");
