@@ -81,11 +81,9 @@ class _IncidentReportPageState extends State<IncidentReportPage>
   }
 
   void _resetSuccessAnimation() {
-    // Reinicia o AnimationController antes de iniciar a animação
     _successController.reset();
   }
 
-  // Método para mostrar animação de envio
   Future<void> _sendingAudio() async {
     setState(() {
       isSending = true;
@@ -95,7 +93,7 @@ class _IncidentReportPageState extends State<IncidentReportPage>
     print(prefs?.getString('userId'));
     String? recordingId = prefs?.getString('recordingId');
     String? filePath = prefs?.getString('filePath');
-    // Enviar gravação para o backend
+
     try {
       print(recordingId);
       await _recorder.sendRecording(recordingId, filePath);
@@ -125,18 +123,16 @@ class _IncidentReportPageState extends State<IncidentReportPage>
               children: [
                 AppBar(
                   backgroundColor: Color(0xFFC3C7FD),
-                  leading: Container(
-                    child: IconButton(
-                      icon: Icon(
-                        Icons.exit_to_app,
-                        color: Colors.black,
-                      ),
-                      onPressed: () async {
-                        await prefs?.remove("userId");
-                        Navigator.pushNamedAndRemoveUntil(
-                            context, '/', (route) => false);
-                      },
+                  leading: IconButton(
+                    icon: const Icon(
+                      Icons.exit_to_app,
+                      color: Colors.black,
                     ),
+                    onPressed: () async {
+                      await prefs?.remove("userId");
+                      Navigator.pushNamedAndRemoveUntil(
+                          context, '/', (route) => false);
+                    },
                   ),
                 ),
                 // Header com logo
@@ -154,9 +150,7 @@ class _IncidentReportPageState extends State<IncidentReportPage>
                     },
                   ),
                 ),
-                SizedBox(height: 50),
-                // Aviso de áudio pendente
-                // Aviso de gravação em andamento
+                const SizedBox(height: 50),
                 ValueListenableBuilder<bool>(
                   valueListenable: AudioRecord.isRecording,
                   builder: (context, isRecording, child) {
@@ -227,8 +221,8 @@ class _IncidentReportPageState extends State<IncidentReportPage>
                 //       return const SizedBox.shrink();
                 //     }),
                 // Campo para data
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.0),
                   child: Text("Data do incidente"),
                 ),
                 GestureDetector(
@@ -238,7 +232,7 @@ class _IncidentReportPageState extends State<IncidentReportPage>
                     child: TextField(
                       enabled: false,
                       controller: TextEditingController(text: selectedDate),
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         labelText: "Informe a data",
                         prefixIcon: Icon(
                           Icons.date_range,
@@ -250,9 +244,8 @@ class _IncidentReportPageState extends State<IncidentReportPage>
                   ),
                 ),
 
-                // Descrição do incidente
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.0),
                   child: Text("Descrição do ocorrido"),
                 ),
                 Container(
@@ -260,7 +253,7 @@ class _IncidentReportPageState extends State<IncidentReportPage>
                   child: TextField(
                     maxLines: 5,
                     controller: _descriptionController,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       hintText: "Descreva o que aconteceu...",
                       border: OutlineInputBorder(),
                     ),
@@ -268,15 +261,15 @@ class _IncidentReportPageState extends State<IncidentReportPage>
                 ),
 
                 // Envio de arquivos
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.0),
                   child: Text("Envio de provas"),
                 ),
                 Container(
-                  margin: EdgeInsets.all(16.0),
+                  margin: const EdgeInsets.all(16.0),
                   child: ElevatedButton(
                     onPressed: _pickFile,
-                    child: Text("Escolha um arquivo"),
+                    child: const Text("Escolha um arquivo"),
                   ),
                 ),
                 if (selectedFile.isNotEmpty)
@@ -288,7 +281,7 @@ class _IncidentReportPageState extends State<IncidentReportPage>
                 // Botão de envio
                 Center(
                   child: Container(
-                    margin: EdgeInsets.symmetric(vertical: 50.0),
+                    margin: const EdgeInsets.symmetric(vertical: 50.0),
                     child: ValueListenableBuilder<bool>(
                       valueListenable: AudioRecord.isRecording,
                       builder: (context, isRecording, child) {
@@ -298,9 +291,9 @@ class _IncidentReportPageState extends State<IncidentReportPage>
                               : null, // Desabilita se não houver áudio pendente
                           style: ElevatedButton.styleFrom(
                             backgroundColor: isRecording
-                                ? Color(0xFF5360F5)
+                                ? const Color(0xFF5360F5)
                                 : Colors.grey, // Cor do botão desativado
-                            minimumSize: Size(200, 50),
+                            minimumSize: const Size(200, 50),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
@@ -333,8 +326,8 @@ class _IncidentReportPageState extends State<IncidentReportPage>
                       height: 150,
                       repeat: true,
                     ),
-                    SizedBox(height: 16),
-                    Text(
+                    const SizedBox(height: 16),
+                    const Text(
                       "Enviando...",
                       style: TextStyle(
                         color: Colors.white,

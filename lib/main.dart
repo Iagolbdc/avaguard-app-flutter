@@ -28,7 +28,7 @@ Future<void> main() async {
     ),
   );
 
-  await audioHandler.startService();
+  Future.microtask(() => audioHandler.startService());
 
   runApp(MyApp());
 }
@@ -54,7 +54,8 @@ class MyApp extends StatelessWidget {
           print(userId);
 
           if (userId != null && userId.isNotEmpty) {
-            return IncidentReportPage(userId: userId);
+            return PermissionRequester(
+                child: IncidentReportPage(userId: userId));
           } else {
             return PermissionRequester(child: LoginScreen());
           }

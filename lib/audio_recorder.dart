@@ -113,26 +113,30 @@ class AudioRecord {
       if (finishResponse.statusCode == 201) {
         print("Gravação enviada com sucesso para o backend.");
         //hasPendingAudio.value = false;
-
+        isRecording.value = false;
         // Apagar o arquivo local após o envio
-        if (localFilePath.isNotEmpty) {
-          final file = File(localFilePath);
-          if (await file.exists()) {
-            try {
-              await file.delete();
-              print("Arquivo local deletado: $localFilePath");
-            } catch (e) {
-              print("Erro ao deletar o arquivo: $e");
-            }
-          } else {
-            print("Arquivo não encontrado para deletar: $localFilePath");
-          }
-        }
+        // if (localFilePath.isNotEmpty) {
+        //   final file = File(localFilePath);
+        //   if (await file.exists()) {
+        //     try {
+        //       await file.delete();
+        //       print("Arquivo local deletado: $localFilePath");
+        //     } catch (e) {
+        //       print("Erro ao deletar o arquivo: $e");
+        //     }
+        //   } else {
+        //     print("Arquivo não encontrado para deletar: $localFilePath");
+        //   }
+        // }
       } else {
         print(
             "Erro ao enviar a gravação para o backend: ${finishResponse.body}");
       }
     }
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.remove('recordingId');
+    prefs.remove("filePath");
 
     if (recordingId == null || _firebaseUrl == null) {
       print("Erro: ID da gravação ou URL do áudio ausente.");

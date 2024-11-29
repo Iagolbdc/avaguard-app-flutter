@@ -31,20 +31,24 @@ class AvaguardAudioHandler extends BaseAudioHandler {
 
   AvaguardAudioHandler() {
     _player.playbackEventStream.map(_transformEvent).pipe(playbackState);
-    // ... and also the current media item via mediaItem.
     mediaItem.add(_mediaItem);
-
-    // Load the player.
     _player.setAudioSource(AudioSource.uri(Uri.parse(_mediaItem.id)));
   }
 
   @override
   Future<void> pause() async {
     await initPrefs();
-    _recorder.sendRecording(recordingId, localFilePath);
+    print("//////////////////////");
+    print("$recordingId - $localFilePath");
+    if (recordingId != null && localFilePath != null)
+      _recorder.sendRecording(recordingId, localFilePath);
+    isRecording.add(false);
     print("Parando");
     isRecording.add(false);
-    await _recorder.stopRecording();
+    if (isRecording.value) {
+      print(isRecording.value);
+      await _recorder.stopRecording();
+    }
     return _player.pause();
   }
 
