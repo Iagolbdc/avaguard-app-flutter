@@ -192,10 +192,10 @@ class AudioRecord {
       String filePath, SharedPreferences prefs) async {
     if (isRecording.value) {
       print(await stopRecording(recordingId, filePath, prefs));
-      return false; // Parou a gravação
+      return false;
     } else {
       await startRecording(userId, prefs);
-      return true; // Começou a gravação
+      return true;
     }
   }
 

@@ -41,7 +41,7 @@ class AvaguardAudioHandler extends BaseAudioHandler {
     print("Parando");
     if (recordingId == null || localFilePath == null) {
       print("Erro: Nenhuma gravação ativa para pausar.");
-      return;
+      return _player.pause();
     }
     await _recorder.stopRecording(
         recordingId!, localFilePath!, await initPrefs());
@@ -50,6 +50,8 @@ class AvaguardAudioHandler extends BaseAudioHandler {
 
   @override
   Future<void> play() async {
+    print("/////// USER ID ///////////////");
+    print(userId);
     if (_player.playerState.playing) {
       print("Parando");
       if (userId?.isNotEmpty ?? false) {
@@ -60,8 +62,7 @@ class AvaguardAudioHandler extends BaseAudioHandler {
     }
 
     if (userId?.isNotEmpty ?? false) {
-      await _recorder.toggleRecording(
-          userId!, recordingId!, localFilePath!, await initPrefs());
+      await _recorder.startRecording(userId!, await initPrefs());
     }
     print("Tocando");
 
