@@ -10,7 +10,6 @@ class FirebaseStorageService {
       final file = File(filePath);
       final fileName = file.uri.pathSegments.last;
 
-      // Define a referência no Storage com o nome da pasta e arquivo
       final ref = _firebaseStorage.ref().child('$folderName/$fileName');
 
       // Realiza o upload

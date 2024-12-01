@@ -1,8 +1,10 @@
 import 'package:avaguard/audio_recorder.dart';
+import 'package:avaguard/resources/firestore_methods.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'send_loose_record.dart';
 
 class IncidentReportPage extends StatefulWidget {
   final userId;
@@ -17,15 +19,37 @@ class _IncidentReportPageState extends State<IncidentReportPage>
     with TickerProviderStateMixin {
   final _recorder = AudioRecord();
   String selectedDate = "Informe a data e hora";
-  String selectedFile = "";
+  final List<PlatformFile> _selectedFiles = [];
   bool isSending = false;
   bool isSuccess = false;
   late AnimationController _successController;
   SharedPreferences? prefs;
   final TextEditingController _descriptionController = TextEditingController();
+  final SendLooseRecord _sendLooseRecord = SendLooseRecord();
+  final List<String> urls = [];
 
   Future<void> initPrefs() async {
     prefs = await SharedPreferences.getInstance();
+  }
+
+  IconData _getFileIcon(String extension) {
+    switch (extension.toLowerCase()) {
+      case 'pdf':
+        return Icons.picture_as_pdf;
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+        return Icons.image;
+      case 'mp4':
+      case 'avi':
+      case 'mkv':
+        return Icons.videocam;
+      case 'doc':
+      case 'docx':
+        return Icons.description;
+      default:
+        return Icons.insert_drive_file;
+    }
   }
 
   @override
@@ -64,21 +88,29 @@ class _IncidentReportPageState extends State<IncidentReportPage>
         "Gravação pendente: ${prefs!.getString('recordingId')} - ${prefs!.getString('filePath')}");
     if (pickedDate != null) {
       setState(() {
-        selectedDate =
-            "${pickedDate.day}/${pickedDate.month}/${pickedDate.year}";
+        selectedDate = pickedDate.toIso8601String();
       });
     }
   }
 
-  // Método para escolher arquivo
-  Future<void> _pickFile() async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles();
+// Método para escolher arquivos
+  Future<void> _pickFiles() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      allowMultiple: true,
+    );
 
     if (result != null) {
       setState(() {
-        selectedFile = result.files.single.name;
+        _selectedFiles.addAll(result.files);
       });
     }
+  }
+
+  // Método para remover arquivo
+  void _removeFile(int index) {
+    setState(() {
+      _selectedFiles.removeAt(index);
+    });
   }
 
   void _resetSuccessAnimation() {
@@ -108,9 +140,69 @@ class _IncidentReportPageState extends State<IncidentReportPage>
       isSuccess = true;
       _descriptionController.clear();
       selectedDate = "Informe a data e hora";
+      _selectedFiles.clear();
     });
 
     _resetSuccessAnimation();
+  }
+
+  Future<void> _sendLooseRecords() async {
+    if (selectedDate == "Informe a data e hora") {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Selecione uma data válida"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    } else {
+      setState(() {
+        isSending = true;
+      });
+
+      try {
+        for (var file in _selectedFiles) {
+          final filePath = file.path;
+          if (filePath != null) {
+            final url = await FirebaseStorageService()
+                .uploadFile(filePath, "loose_files");
+            if (url != null) {
+              urls.add(url);
+            } else {
+              throw Exception("Falha ao fazer upload do arquivo: ${file.name}");
+            }
+          }
+        }
+
+        if (urls.length == _selectedFiles.length) {
+          // Envia os dados para o backend
+          await _sendLooseRecord.sendLooseEmployeesRecording(
+            userId: widget.userId,
+            urls: urls,
+            date: selectedDate,
+            description: _descriptionController.text,
+          );
+        } else {
+          throw Exception("Nem todos os arquivos foram enviados com sucesso.");
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Erro ao enviar: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } finally {
+        setState(() {
+          isSending = false;
+          isSuccess = true;
+          _descriptionController.clear();
+          selectedDate = "Informe a data e hora";
+        });
+
+        _resetSuccessAnimation();
+      }
+    }
   }
 
   @override
@@ -157,26 +249,90 @@ class _IncidentReportPageState extends State<IncidentReportPage>
                   builder: (context, isRecording, child) {
                     if (isRecording) {
                       return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16.0, vertical: 8.0),
                         child: Card(
-                          color: Colors.green[700],
+                          elevation: 4,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Padding(
-                            padding: EdgeInsets.all(12.0),
+                          child: Container(
+                            padding: const EdgeInsets.all(16.0),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.green[400]!,
+                                  Colors.green[600]!
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                             child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Icon(Icons.mic, color: Colors.white),
-                                SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    "Gravação em andamento...",
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
+                                Row(
+                                  children: [
+                                    const Icon(Icons.mic,
+                                        color: Colors.white, size: 24),
+                                    const SizedBox(width: 12),
+                                    const Text(
+                                      "Gravação em andamento...",
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
                                     ),
-                                  ),
+                                  ],
+                                ),
+                                Row(
+                                  children: [
+                                    GestureDetector(
+                                      onTap: () async {
+                                        if (prefs != null) {
+                                          await _recorder
+                                              .cancelRecording(prefs!);
+                                          setState(
+                                              () {}); // Atualiza a UI após o cancelamento
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                  "Gravação cancelada com sucesso!"),
+                                              backgroundColor: Colors.red,
+                                              duration: Duration(seconds: 2),
+                                            ),
+                                          );
+                                        }
+                                        setState(
+                                            () {}); // Atualiza a UI após o cancelamento
+                                      },
+                                      child: CircleAvatar(
+                                        radius: 20,
+                                        backgroundColor: Colors.red,
+                                        child: const Icon(
+                                          Icons.stop,
+                                          color: Colors.white,
+                                          size: 20,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 5),
+                                    GestureDetector(
+                                      onTap: _sendingAudio,
+                                      child: const CircleAvatar(
+                                        radius: 20,
+                                        backgroundColor: Colors.blue,
+                                        child: Icon(
+                                          Icons.send,
+                                          color: Colors.white,
+                                          size: 20,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
@@ -187,41 +343,6 @@ class _IncidentReportPageState extends State<IncidentReportPage>
                     return const SizedBox.shrink();
                   },
                 ),
-                // ValueListenableBuilder(
-                //     valueListenable: AudioRecord.hasPendingAudio,
-                //     builder: (context, hasPendingAudio, child) {
-                //       if (hasPendingAudio) {
-                //         return Padding(
-                //           padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                //           child: Card(
-                //             color: Colors.yellow[700],
-                //             shape: RoundedRectangleBorder(
-                //               borderRadius: BorderRadius.circular(8),
-                //             ),
-                //             child: Padding(
-                //               padding: const EdgeInsets.all(12.0),
-                //               child: Row(
-                //                 children: [
-                //                   Icon(Icons.warning, color: Colors.black),
-                //                   SizedBox(width: 8),
-                //                   Expanded(
-                //                     child: Text(
-                //                       "Você tem um áudio pendente pronto para envio.",
-                //                       style: TextStyle(
-                //                         color: Colors.black,
-                //                         fontWeight: FontWeight.bold,
-                //                       ),
-                //                     ),
-                //                   ),
-                //                 ],
-                //               ),
-                //             ),
-                //           ),
-                //         );
-                //       }
-                //       return const SizedBox.shrink();
-                //     }),
-                // Campo para data
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16.0),
                   child: Text("Data do incidente"),
@@ -266,48 +387,117 @@ class _IncidentReportPageState extends State<IncidentReportPage>
                   padding: EdgeInsets.symmetric(horizontal: 16.0),
                   child: Text("Envio de provas"),
                 ),
-                Container(
-                  margin: const EdgeInsets.all(16.0),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.0),
                   child: ElevatedButton(
-                    onPressed: _pickFile,
-                    child: const Text("Escolha um arquivo"),
+                    onPressed: _pickFiles,
+                    child: const Text("Escolher arquivos"),
                   ),
                 ),
-                if (selectedFile.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Text("Item selecionado: $selectedFile"),
+
+                const SizedBox(height: 8),
+
+                // Exibição dos arquivos selecionados com estilo
+                if (_selectedFiles.isNotEmpty)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Arquivos Selecionados:",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: _selectedFiles.length,
+                        itemBuilder: (context, index) {
+                          final file = _selectedFiles[index];
+                          final fileExtension = file.extension ?? "file";
+                          final fileSize =
+                              (file.size / 1024).toStringAsFixed(2);
+
+                          return Card(
+                            margin: const EdgeInsets.symmetric(
+                              vertical: 4.0,
+                            ),
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8.0),
+                            ),
+                            child: ListTile(
+                              leading: Icon(
+                                _getFileIcon(fileExtension),
+                                color: Colors.blue,
+                                size: 40,
+                              ),
+                              title: Text(
+                                file.name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              subtitle: Text("$fileSize KB"),
+                              trailing: IconButton(
+                                icon: const Icon(
+                                  Icons.delete,
+                                  color: Colors.red,
+                                ),
+                                onPressed: () => _removeFile(index),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  )
+                else
+                  Center(
+                    child: Column(
+                      children: const [
+                        Icon(
+                          Icons.folder_open,
+                          size: 50,
+                          color: Colors.grey,
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          "Nenhum arquivo selecionado.",
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ],
+                    ),
                   ),
+
+                const SizedBox(height: 16),
 
                 // Botão de envio
                 Center(
                   child: Container(
                     margin: const EdgeInsets.symmetric(vertical: 50.0),
-                    child: ValueListenableBuilder<bool>(
-                      valueListenable: AudioRecord.isRecording,
-                      builder: (context, isRecording, child) {
-                        return ElevatedButton(
-                          onPressed: isRecording
-                              ? _sendingAudio
-                              : null, // Desabilita se não houver áudio pendente
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: isRecording
-                                ? const Color(0xFF5360F5)
-                                : Colors.grey, // Cor do botão desativado
-                            minimumSize: const Size(200, 50),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: Text(
-                            "Enviar",
-                            style: TextStyle(
-                              color:
-                                  isRecording ? Colors.white : Colors.black54,
-                            ),
-                          ),
-                        );
-                      },
+                    child: ElevatedButton(
+                      onPressed:
+                          _selectedFiles.isNotEmpty ? _sendLooseRecords : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _selectedFiles.isNotEmpty
+                            ? const Color(0xFF5360F5)
+                            : Colors.grey, // Cor do botão desativado
+                        minimumSize: const Size(200, 50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: Text(
+                        "Enviar",
+                        style: TextStyle(
+                          color: _selectedFiles.isNotEmpty
+                              ? Colors.white
+                              : Colors.black54,
+                        ),
+                      ),
                     ),
                   ),
                 ),

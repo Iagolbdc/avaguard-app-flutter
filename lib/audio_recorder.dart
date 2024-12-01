@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
+import 'package:avaguard/main.dart';
 import 'package:avaguard/resources/firestore_methods.dart';
 import 'package:flutter/foundation.dart';
 import 'package:record/record.dart';
@@ -117,8 +118,8 @@ class AudioRecord {
   }
 
   // Para a gravação
-  Future<String?> stopRecording(
-      String recordingId, String localFilePath, SharedPreferences prefs) async {
+  Future<String?> stopRecording(SharedPreferences prefs,
+      [String? recordingId, String? localFilePath]) async {
     if (!isRecording.value) {
       print("Nenhuma gravação em andamento.");
       return null;
@@ -126,6 +127,10 @@ class AudioRecord {
     try {
       final path = await _recorder.stop();
       isRecording.value = false;
+      if (recordingId == null || localFilePath == null) {
+        print("Nenhuma gravação em andamento.");
+        return null;
+      }
       sendRecording(recordingId, localFilePath, prefs);
       return path;
     } catch (e) {
@@ -188,10 +193,39 @@ class AudioRecord {
     await clearPrefs(prefs);
   }
 
+  Future<void> cancelRecording(SharedPreferences prefs) async {
+    String? recordingId = prefs.getString('recordingId');
+
+    if (recordingId == null) {
+      print("Nenhuma gravação pendente para cancelar.");
+      return;
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse(cancelAudioRecording), // Atualize com a URL correta
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'employeesRecordingId': recordingId}),
+      );
+
+      if (response.statusCode == 201) {
+        print("Gravação cancelada com sucesso no backend.");
+
+        audioHandler.pause();
+
+        await clearPrefs(prefs);
+      } else {
+        print("Erro ao cancelar a gravação no backend: ${response.body}");
+      }
+    } catch (e) {
+      print("Erro ao cancelar a gravação: $e");
+    }
+  }
+
   Future<bool> toggleRecording(String userId, String recordingId,
       String filePath, SharedPreferences prefs) async {
     if (isRecording.value) {
-      print(await stopRecording(recordingId, filePath, prefs));
+      print(await stopRecording(prefs, recordingId, filePath));
       return false;
     } else {
       await startRecording(userId, prefs);

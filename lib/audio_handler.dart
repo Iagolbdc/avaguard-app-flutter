@@ -39,12 +39,9 @@ class AvaguardAudioHandler extends BaseAudioHandler {
     print("$recordingId - $localFilePath");
     // if (recordingId != null && localFilePath != null) _recorder.sendRecording(recordingId, localFilePath);
     print("Parando");
-    if (recordingId == null || localFilePath == null) {
-      print("Erro: Nenhuma gravação ativa para pausar.");
-      return _player.pause();
-    }
+    _player.pause();
     await _recorder.stopRecording(
-        recordingId!, localFilePath!, await initPrefs());
+        await initPrefs(), recordingId, localFilePath);
     return _player.pause();
   }
 
