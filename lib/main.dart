@@ -8,13 +8,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'incident_report_page.dart';
 import 'login_screen.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 late final AvaguardAudioHandler audioHandler;
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-
+  await configureNotifications();
   SharedPreferences prefs = await SharedPreferences.getInstance();
   print(prefs.getString('userId'));
   // Inicializando o AudioService
@@ -31,6 +34,33 @@ Future<void> main() async {
   Future.microtask(() => audioHandler.startService());
 
   runApp(MyApp());
+}
+
+Future<void> configureNotifications() async {
+  const AndroidNotificationChannel channel = AndroidNotificationChannel(
+    'audio_focus_channel', // ID único do canal
+    'Áudio Focus', // Nome do canal
+    description: 'Notificações de foco de áudio',
+    importance: Importance.high, // Certifique-se de que é alta prioridade
+  );
+
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+
+  // Configurar o canal de notificação
+  await flutterLocalNotificationsPlugin
+      .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>()
+      ?.createNotificationChannel(channel);
+
+  // Configuração inicial
+  const AndroidInitializationSettings initializationSettingsAndroid =
+      AndroidInitializationSettings('@mipmap/ic_launcher');
+
+  const InitializationSettings initializationSettings =
+      InitializationSettings(android: initializationSettingsAndroid);
+
+  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
 }
 
 class MyApp extends StatelessWidget {

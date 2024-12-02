@@ -26,6 +26,24 @@ class _PermissionRequesterState extends State<PermissionRequester> {
 }
 
 Future<void> requestPermissions(BuildContext context) async {
+  Future<void> requestNotificationPermission() async {
+    if (await Permission.notification.isGranted) {
+      print("Permissão para notificações já concedida.");
+      return;
+    }
+
+    final status = await Permission.notification.request();
+
+    if (status.isGranted) {
+      print("Permissão para notificações concedida.");
+    } else if (status.isDenied) {
+      print("Permissão para notificações negada.");
+    } else if (status.isPermanentlyDenied) {
+      print("Permissão permanentemente negada. Direcionar para configurações.");
+      await openAppSettings();
+    }
+  }
+
   // Lista de permissões necessárias
   final permissions = [
     Permission.microphone,
@@ -38,6 +56,7 @@ Future<void> requestPermissions(BuildContext context) async {
   // Solicitar permissões
   for (var permission in permissions) {
     final status = await permission.request();
+    await requestNotificationPermission();
     if (status.isDenied || status.isPermanentlyDenied) {
       hasDeniedPermission = true;
     }
