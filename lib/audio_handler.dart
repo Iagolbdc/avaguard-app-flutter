@@ -8,7 +8,7 @@ import 'package:audio_session/audio_session.dart';
 
 class AvaguardAudioHandler extends BaseAudioHandler {
   final _player = AudioPlayer();
-  final AudioRecord _recorder = AudioRecord();
+  final AudioRecord _recorder = AudioRecord();  
   AudioSession? _audioSession;
   String? userId;
   String? recordingId;

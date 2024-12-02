@@ -32,7 +32,7 @@ class AudioRecord {
 
         await _recorder.start(
           const RecordConfig(
-            encoder: AudioEncoder.aacLc,
+            encoder: AudioEncoder.wav,
             sampleRate: 44100,
             bitRate: 128000,
           ),
@@ -53,7 +53,7 @@ class AudioRecord {
       final dir = await getExternalStorageDirectory();
       if (dir == null) throw Exception("Erro ao acessar o diretório externo.");
       final path =
-          '${dir.path}/audios/audio_${DateTime.now().millisecondsSinceEpoch}_$userId.m4a';
+          '${dir.path}/audios/audio_${DateTime.now().millisecondsSinceEpoch}_$userId.wav';
       await Directory('${dir.path}/audios').create(recursive: true);
       prefs.setString('filePath', path);
       return path;
