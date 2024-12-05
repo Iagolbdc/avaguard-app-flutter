@@ -5,6 +5,7 @@ import 'package:lottie/lottie.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'send_loose_record.dart';
+import 'main.dart';
 
 class IncidentReportPage extends StatefulWidget {
   final userId;
@@ -125,25 +126,36 @@ class _IncidentReportPageState extends State<IncidentReportPage>
     print(widget.userId);
     print(prefs?.getString('userId'));
     String? recordingId = prefs?.getString('recordingId');
-    String? filePath = prefs?.getString('filePath');
 
     try {
       print(recordingId);
-      await _recorder.sendRecording(recordingId, filePath, prefs!);
+      await audioHandler.pause();
       print("Incidente reportado com sucesso.");
+      setState(() {
+        isSending = false;
+      });
     } catch (e) {
       print("Erro ao enviar o incidente: $e");
+      setState(() {
+        isSending = false;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Erro ao enviar o áudio: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      });
+    } finally {
+      setState(() {
+        isSending = false;
+        isSuccess = true;
+        _descriptionController.clear();
+        selectedDate = "Informe a data e hora";
+        _selectedFiles.clear();
+      });
+
+      _resetSuccessAnimation();
     }
-
-    setState(() {
-      isSending = false;
-      isSuccess = true;
-      _descriptionController.clear();
-      selectedDate = "Informe a data e hora";
-      _selectedFiles.clear();
-    });
-
-    _resetSuccessAnimation();
   }
 
   Future<void> _sendLooseRecords() async {

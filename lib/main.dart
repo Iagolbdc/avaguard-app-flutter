@@ -11,6 +11,42 @@ import 'login_screen.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 late final AvaguardAudioHandler audioHandler;
+
+Future<void> showNotification(String title, String body) async {
+  final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+
+  const AndroidInitializationSettings initializationSettingsAndroid =
+      AndroidInitializationSettings('@mipmap/ic_launcher');
+
+  final InitializationSettings initializationSettings =
+      InitializationSettings(android: initializationSettingsAndroid);
+
+  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+
+  const AndroidNotificationDetails androidNotificationDetails =
+      AndroidNotificationDetails(
+    'status_sending', // ID do canal
+    'Status Sending', // Nome do canal
+    channelDescription: 'Notificação de Envio do Áudio',
+    importance: Importance.high,
+    priority: Priority.high,
+    ongoing: false,
+    autoCancel: false,
+    fullScreenIntent: true,
+  );
+
+  const NotificationDetails notificationDetails =
+      NotificationDetails(android: androidNotificationDetails);
+
+  await flutterLocalNotificationsPlugin.show(
+    0,
+    title,
+    body,
+    notificationDetails,
+    payload: 'retomar_audio',
+  );
+}
+
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 

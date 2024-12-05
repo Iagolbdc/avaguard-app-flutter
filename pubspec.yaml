@@ -42,6 +42,7 @@ flutter:
    - assets/logo_avaguard.png
    - assets/success.json
    - assets/sending.json
+   - assets/audio-test.mp3
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

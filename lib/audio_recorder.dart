@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'config.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class AudioRecord {
   final _recorder = AudioRecorder();
@@ -24,9 +25,6 @@ class AudioRecord {
 
     try {
       if (userId.isNotEmpty) {
-        final response = await _initiateBackendRecording(userId, prefs);
-        if (response == null) return;
-
         final path = await _prepareRecordingFile(userId, prefs);
         if (path == null) return;
 
@@ -40,6 +38,10 @@ class AudioRecord {
         );
 
         isRecording.value = true;
+
+        final response = await _initiateBackendRecording(userId, prefs);
+        if (response == null) return;
+
         print("Gravação iniciada no arquivo: $path");
       }
     } catch (e) {
@@ -102,6 +104,8 @@ class AudioRecord {
       if (response.statusCode == 201) {
         final body = jsonDecode(response.body);
         await clearPrefs(prefs);
+        await showNotification("Áudio enviado com sucesso",
+            "Seu áudio foi enviado e será analisado.");
         return body;
       } else {
         print("Erro enviar gravação ao backend: ${response.body}");
@@ -131,7 +135,10 @@ class AudioRecord {
         print("Nenhuma gravação em andamento.");
         return null;
       }
-      sendRecording(recordingId, localFilePath, prefs);
+
+      await showNotification("Enviando...", "Áudio está sendo enviado.");
+
+      await sendRecording(recordingId, localFilePath, prefs);
       return path;
     } catch (e) {
       print("Erro ao parar gravação: $e");
@@ -170,24 +177,28 @@ class AudioRecord {
       return;
     }
 
-    var response = _finishBackendRecording(recordingId!, url, prefs);
+    try {
+      var response = _finishBackendRecording(recordingId!, url, prefs);
 
-    print(response.toString());
+      print(response.toString());
 
-    isRecording.value = false;
+      isRecording.value = false;
 
-    if (localFilePath != null) {
-      final file = File(localFilePath);
-      if (await file.exists()) {
-        try {
-          await file.delete();
-          print("Arquivo local deletado: $localFilePath");
-        } catch (e) {
-          print("Erro ao deletar o arquivo: $e");
+      if (localFilePath != null) {
+        final file = File(localFilePath);
+        if (await file.exists()) {
+          try {
+            await file.delete();
+            print("Arquivo local deletado: $localFilePath");
+          } catch (e) {
+            print("Erro ao deletar o arquivo: $e");
+          }
+        } else {
+          print("Arquivo não encontrado para deletar: $localFilePath");
         }
-      } else {
-        print("Arquivo não encontrado para deletar: $localFilePath");
       }
+    } catch (e) {
+      print("Erro ao finalizar gravação no backend: $e");
     }
 
     await clearPrefs(prefs);
@@ -202,18 +213,18 @@ class AudioRecord {
     }
 
     try {
+      await clearPrefs(prefs);
+
+      audioHandler.pause();
+
       final response = await http.post(
-        Uri.parse(cancelAudioRecording), // Atualize com a URL correta
+        Uri.parse(cancelAudioRecording),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'employeesRecordingId': recordingId}),
       );
 
       if (response.statusCode == 201) {
         print("Gravação cancelada com sucesso no backend.");
-
-        audioHandler.pause();
-
-        await clearPrefs(prefs);
       } else {
         print("Erro ao cancelar a gravação no backend: ${response.body}");
       }
@@ -236,5 +247,9 @@ class AudioRecord {
   Future<void> clearPrefs(SharedPreferences prefs) async {
     await prefs.remove('recordingId');
     await prefs.remove('filePath');
+  }
+
+  Future<void> cancelNotification() async {
+    await flutterLocalNotificationsPlugin.cancel(0);
   }
 }
